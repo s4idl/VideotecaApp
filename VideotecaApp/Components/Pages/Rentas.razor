@@ -1,0 +1,134 @@
+﻿@page "/rentas"
+@rendermode InteractiveServer
+@inject VideotecaApp.Repositorio.Interfaces.IRepositorioRenta repoRenta
+@inject VideotecaApp.Repositorio.Interfaces.IRepositorioCliente repoCliente
+@inject VideotecaApp.Repositorio.Interfaces.IRepositorioPelicula repoPelicula
+@using VideotecaApp.Models
+@using System.ComponentModel.DataAnnotations
+
+<h3>Registrar Renta de Película</h3>
+
+@if (clientes.Count == 0 || peliculas.Count == 0)
+{
+    <p>Primero debes registrar clientes y películas.</p>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(mensajeError))
+    {
+        <div class="alert alert-danger" role="alert">
+            @mensajeError
+        </div>
+    }
+
+    <EditForm Model="@nuevaRenta" OnValidSubmit="GuardarRenta">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label>Cliente:</label>
+            <InputSelect class="form-control" @bind-Value="nuevaRenta.ClienteId">
+                <option disabled value="0">-- Selecciona un cliente --</option>
+                @foreach (var c in clientes)
+                {
+                    <option value="@c.Id">@c.Nombre</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => nuevaRenta.ClienteId)" />
+        </div>
+
+        <div class="mb-3">
+            <label>Película:</label>
+            <InputSelect class="form-control" @bind-Value="nuevaRenta.PeliculaId">
+                <option disabled value="0">-- Selecciona una película --</option>
+                @foreach (var p in peliculas)
+                {
+                    <option value="@p.Id">@p.Titulo</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => nuevaRenta.PeliculaId)" />
+        </div>
+
+        <button class="btn btn-success" type="submit">Registrar Renta</button>
+    </EditForm>
+}
+
+<hr />
+<h4>Historial de Rentas</h4>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Cliente</th>
+            <th>Película</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var r in rentas)
+        {
+            <tr>
+                <td>@r.Cliente?.Nombre</td>
+                <td>@r.Pelicula?.Titulo</td>
+                <td>@r.FechaRenta.ToShortDateString()</td>
+                <td>@(r.Devuelto ? "Devuelto" : "Viendo")</td>
+                <td>
+                    @if (!r.Devuelto)
+                    {
+                        <button class="btn btn-sm btn-secondary me-1" @onclick="() => MarcarComoDevuelto(r.Id)">Marcar devuelto</button>
+                    }
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(r.Id)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private Renta nuevaRenta = new();
+    private List<Cliente> clientes = new();
+    private List<Pelicula> peliculas = new();
+    private List<Renta> rentas = new();
+    private string? mensajeError = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = await repoCliente.ObtenerTodos();
+        peliculas = await repoPelicula.ObtenerTodas();
+        rentas = await repoRenta.ObtenerTodas();
+    }
+
+    private async Task GuardarRenta()
+    {
+        mensajeError = null;
+
+        try
+        {
+            await repoRenta.Crear(nuevaRenta);
+            nuevaRenta = new();
+            peliculas = await repoPelicula.ObtenerTodas();
+            rentas = await repoRenta.ObtenerTodas();
+        }
+        catch (InvalidOperationException ex)
+        {
+            mensajeError = ex.Message;
+        }
+        catch
+        {
+            mensajeError = "Ocurrió un error inesperado al registrar la renta.";
+        }
+    }
+
+    private async Task Eliminar(int id)
+    {
+        await repoRenta.Eliminar(id);
+        rentas = await repoRenta.ObtenerTodas();
+    }
+
+    private async Task MarcarComoDevuelto(int id)
+    {
+        await repoRenta.MarcarComoDevuelto(id);
+        rentas = await repoRenta.ObtenerTodas();
+    }
+}

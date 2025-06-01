@@ -1,0 +1,97 @@
+﻿@page "/clientes"
+@rendermode InteractiveServer
+@inject VideotecaApp.Repositorio.Interfaces.IRepositorioCliente repoCliente
+@using System.ComponentModel.DataAnnotations
+@using VideotecaApp.Models
+
+<h3>Registro de Clientes</h3>
+
+<EditForm Model="cliente" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label>Nombre:</label>
+        <InputText class="form-control" @bind-Value="cliente.Nombre" />
+        <ValidationMessage For="@(() => cliente.Nombre)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Correo:</label>
+        <InputText class="form-control" @bind-Value="cliente.Correo" />
+        <ValidationMessage For="@(() => cliente.Correo)" />
+    </div>
+
+    <button class="btn btn-primary" type="submit">@((cliente.Id == 0) ? "Guardar" : "Actualizar")</button>
+</EditForm>
+
+<hr />
+<h4>Clientes registrados</h4>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in clientes)
+        {
+            <tr>
+                <td>@c.Nombre</td>
+                <td>@c.Correo</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" @onclick="() => Editar(c)">Editar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(c.Id)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private Cliente cliente = new();
+    private List<Cliente> clientes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = await repoCliente.ObtenerTodos();
+    }
+
+    private async Task Guardar()
+    {
+        if (cliente.Id == 0)
+        {
+            await repoCliente.Crear(cliente);
+        }
+        else
+        {
+            var existente = await repoCliente.ObtenerPorId(cliente.Id);
+            if (existente is not null)
+            {
+                existente.Nombre = cliente.Nombre;
+                existente.Correo = cliente.Correo;
+                await repoCliente.Actualizar(existente);
+            }
+        }
+
+        cliente = new();
+        clientes = await repoCliente.ObtenerTodos();
+    }
+
+    private void Editar(Cliente c)
+    {
+        cliente = new Cliente
+            {
+                Id = c.Id,
+                Nombre = c.Nombre,
+                Correo = c.Correo
+            };
+    }
+
+    private async Task Eliminar(int id)
+    {
+        await repoCliente.Eliminar(id);
+        clientes = await repoCliente.ObtenerTodos();
+    }
+}

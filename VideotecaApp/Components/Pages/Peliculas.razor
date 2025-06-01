@@ -1,0 +1,121 @@
+﻿@page "/peliculas"
+@rendermode InteractiveServer
+@inject VideotecaApp.Repositorio.Interfaces.IRepositorioPelicula repoPelicula
+@using System.ComponentModel.DataAnnotations
+@using VideotecaApp.Models
+
+<h3>Registro de Películas</h3>
+
+<EditForm Model="@pelicula" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label>Título:</label>
+        <InputText class="form-control" @bind-Value="pelicula.Titulo" />
+        <ValidationMessage For="@(() => pelicula.Titulo)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Género:</label>
+        <InputSelect class="form-control" @bind-Value="pelicula.Genero">
+            <option disabled value="">-- Selecciona un género --</option>
+            @foreach (var genero in generos)
+            {
+                <option value="@genero">@genero</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => pelicula.Genero)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Copias disponibles:</label>
+        <InputNumber class="form-control" @bind-Value="pelicula.CantidadDisponible" />
+        <ValidationMessage For="@(() => pelicula.CantidadDisponible)" />
+    </div>
+
+    <button class="btn btn-primary" type="submit">@((pelicula.Id == 0) ? "Guardar" : "Actualizar")</button>
+</EditForm>
+
+<hr />
+<h4>Películas registradas</h4>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Género</th>
+            <th>Copias</th>
+            <th>Rentas</th> 
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in peliculas)
+        {
+            <tr>
+                <td>@p.Titulo</td>
+                <td>@p.Genero</td>
+                <td>@p.CantidadDisponible</td>
+                <td>@p.VecesRentada</td> 
+                <td>
+                    <button class="btn btn-sm btn-warning" @onclick="() => Editar(p)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(p.Id)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private Pelicula pelicula = new();
+    private List<Pelicula> peliculas = new();
+
+    private List<string> generos = new()
+    {
+        "Acción", "Aventura", "Ciencia Ficción", "Comedia", "Drama",
+        "Fantasía", "Suspenso", "Terror", "Romance", "Documental"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        peliculas = await repoPelicula.ObtenerTodas();
+    }
+
+    private async Task Guardar()
+    {
+        if (pelicula.Id == 0)
+            await repoPelicula.Crear(pelicula);
+        else
+        {
+            var existente = await repoPelicula.ObtenerPorId(pelicula.Id);
+            if (existente is not null)
+            {
+                existente.Titulo = pelicula.Titulo;
+                existente.Genero = pelicula.Genero;
+                existente.CantidadDisponible = pelicula.CantidadDisponible;
+                await repoPelicula.Actualizar(existente);
+            }
+        }
+
+        pelicula = new();
+        peliculas = await repoPelicula.ObtenerTodas();
+    }
+
+    private void Editar(Pelicula p)
+    {
+        pelicula = new Pelicula
+            {
+                Id = p.Id,
+                Titulo = p.Titulo,
+                Genero = p.Genero,
+                CantidadDisponible = p.CantidadDisponible,
+                VecesRentada = p.VecesRentada 
+            };
+    }
+
+    private async Task Eliminar(int id)
+    {
+        await repoPelicula.Eliminar(id);
+        peliculas = await repoPelicula.ObtenerTodas();
+    }
+}
