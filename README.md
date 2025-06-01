@@ -1,4 +1,3 @@
-📽️ VideotecaApp
 VideotecaApp es una aplicación web desarrollada con Blazor Server y Entity Framework Core que permite gestionar de forma sencilla el registro y control de una videoteca. El sistema incluye funcionalidades completas para manejar las entidades de Películas, Clientes y Rentas de manera intuitiva y eficiente.
 
 Funcionalidades principales:
